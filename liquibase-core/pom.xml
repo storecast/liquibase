@@ -471,8 +471,8 @@
     </profiles>
 
     <scm>
-        <connection>https://github.com/txtr/liquibase.git</connection>
-        <developerConnection>https://github.com/txtr/liquibase.git</developerConnection>
+        <connection>scm:git:git@github.com:txtr/liquibase.git</connection>
+        <developerConnection>scm:git:git@github.com:txtr/liquibase.git</developerConnection>
     </scm>
 
     <distributionManagement>
