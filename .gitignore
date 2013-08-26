@@ -13,3 +13,4 @@ liquibase.integrationtest.local.properties
 /liquibase-integration-tests/target/
 /liquibase-maven-plugin/target/
 /liquibase-osgi/target/
+atlassian-ide-plugin.xml
