@@ -1,9 +1,9 @@
 package liquibase.database.structure;
 
-import liquibase.util.StringUtils;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import liquibase.util.StringUtils;
 
 public class UniqueConstraint implements DatabaseObject, Comparable<UniqueConstraint> {
 	private String name;
@@ -105,7 +105,7 @@ public class UniqueConstraint implements DatabaseObject, Comparable<UniqueConstr
 			} else if (null == that.getTable()) {
 				result = false;
 			} else {
-				result = this.getTable().getName().equals(
+				result = this.getTable().getName().equalsIgnoreCase(
 						that.getTable().getName());
 			}
 		}
@@ -124,12 +124,9 @@ public class UniqueConstraint implements DatabaseObject, Comparable<UniqueConstr
 		thisTableName = null == this.getTable() ? "" : this.getTable()
 				.getName();
 		thatTableName = null == o.getTable() ? "" : o.getTable().getName();
-		int returnValue = thisTableName.compareTo(thatTableName);
+		int returnValue = thisTableName.compareToIgnoreCase(thatTableName);
 		if (returnValue == 0) {
-			returnValue = this.getName().compareTo(o.getName());
-		}
-		if (returnValue == 0) {
-			returnValue = this.getColumnNames().compareTo(o.getColumnNames());
+			returnValue = this.getColumnNames().compareToIgnoreCase(o.getColumnNames());
 		}
 		return returnValue;
 	}
@@ -140,11 +137,8 @@ public class UniqueConstraint implements DatabaseObject, Comparable<UniqueConstr
 		if (this.table != null) {
 			result = this.table.hashCode();
 		}
-		if (this.name != null) {
-			result = 31 * result + this.name.toUpperCase().hashCode();
-		}
 		if (getColumnNames() != null) {
-			result = 31 * result + getColumnNames().hashCode();
+			result = 31 * result + getColumnNames().toUpperCase().hashCode();
 		}
 		return result;
 	}

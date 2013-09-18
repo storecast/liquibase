@@ -1,32 +1,39 @@
 package liquibase.database.structure;
 
-import liquibase.util.StringUtils;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
-import java.util.*;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
+import liquibase.util.StringUtils;
 
 public class Index implements DatabaseObject, Comparable<Index> {
 
-	/** Marks Index as associated with Primary Key [PK] */
-	public final static String MARK_PRIMARY_KEY = "primaryKey";
-	/** Marks Index as associated with Foreign Key [FK] */
-	public final static String MARK_FOREIGN_KEY = "foreignKey";
-	/** Marks Index as associated with Unique Constraint [UC] */
-	public final static String MARK_UNIQUE_CONSTRAINT = "uniqueConstraint";
+    /** Marks Index as associated with Primary Key [PK] */
+    public final static String MARK_PRIMARY_KEY = "primaryKey";
+    /** Marks Index as associated with Foreign Key [FK] */
+    public final static String MARK_FOREIGN_KEY = "foreignKey";
+    /** Marks Index as associated with Unique Constraint [UC] */
+    public final static String MARK_UNIQUE_CONSTRAINT = "uniqueConstraint";
 
     private String name;
     private Table table;
-	private String tablespace;
+    private String tablespace;
     private Boolean unique;
     private List<String> columns = new ArrayList<String>();
     private String filterCondition;
-	// Contain associations of index
-	// for example: foreignKey, primaryKey or uniqueConstraint
-	private Set<String> associatedWith = new HashSet<String>();
+    // Contain associations of index
+    // for example: foreignKey, primaryKey or uniqueConstraint
+    private Set<String> associatedWith = new HashSet<String>();
 
-	public DatabaseObject[] getContainingObjects() {
+    public DatabaseObject[] getContainingObjects() {
         return new DatabaseObject[] {
                 table
-        };        
+        };
     }
 
     public String getName() {
@@ -45,13 +52,13 @@ public class Index implements DatabaseObject, Comparable<Index> {
         this.table = table;
     }
 
-	public String getTablespace() {
-		return tablespace;
-	}
+    public String getTablespace() {
+        return tablespace;
+    }
 
-	public void setTablespace(String tablespace) {
-		this.tablespace = tablespace;
-	}
+    public void setTablespace(String tablespace) {
+        this.tablespace = tablespace;
+    }
 
     public List<String> getColumns() {
         return columns;
@@ -77,93 +84,79 @@ public class Index implements DatabaseObject, Comparable<Index> {
         return this.unique;
     }
 
-	public Set<String> getAssociatedWith() {
-		return associatedWith;
-	}
+    public Set<String> getAssociatedWith() {
+        return associatedWith;
+    }
 
-	public String getAssociatedWithAsString() {
-		return StringUtils.join(associatedWith, ",");
-	}
+    public String getAssociatedWithAsString() {
+        return StringUtils.join(associatedWith, ",");
+    }
 
-	public void addAssociatedWith(String item) {
-		associatedWith.add(item);
-	}
+    public void addAssociatedWith(String item) {
+        associatedWith.add(item);
+    }
 
-	public boolean isAssociatedWith(String keyword) {
-		return associatedWith.contains(keyword);
-	}
+    public boolean isAssociatedWith(String keyword) {
+        return associatedWith.contains(keyword);
+    }
 
-	@Override
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
         Index index = (Index) o;
-        boolean equals = true;
-        for (String column : index.getColumns()) {
-            if (!columns.contains(column)) {
-                equals = false;
-            }
-        }
 
-        if (this.unique == null && index.isUnique() == null) {
-            //continue check
-        } else if (this.unique == null && index.isUnique() != null) {
-            equals = false;
-        } else  if (this.unique != null && index.isUnique() == null) {
-            equals = false;
-        } else if (!this.unique.equals(index.isUnique())) {
-            equals = false;
-        }
+        boolean equals = getColumnNames().equalsIgnoreCase(index.getColumnNames());
 
-        return equals || table.getName().equalsIgnoreCase(index.table.getName());
+        equals &= ObjectUtils.equals(unique, index.unique);
+        equals &= table.getName().equalsIgnoreCase(index.table.getName());
 
+        return equals;
     }
 
     @Override
     public int hashCode() {
-        int result;
-        result = table.getName().toUpperCase().hashCode();
-        result = 31 * result + columns.hashCode();
-        result = 31 * result + (unique == null ? 2 : unique ? 1 : 0);
-        return result;
+        final int hashCode = new HashCodeBuilder().append(table.getName().toUpperCase()).append(getColumnNames().toUpperCase()).append(BooleanUtils.toBoolean(unique)).toHashCode();
+        return hashCode;
     }
 
     public int compareTo(Index o) {
-        int returnValue = this.table.getName().compareTo(o.table.getName());
+        int returnValue = this.table.getName().compareToIgnoreCase(o.table.getName());
 
         if (returnValue == 0) {
-            String thisName = StringUtils.trimToEmpty(this.getName());
-            String oName = StringUtils.trimToEmpty(o.getName());
-            returnValue = thisName.compareTo(oName);
+            returnValue = getColumnNames().compareToIgnoreCase(o.getColumnNames());
         }
 
-        //We should not have two indexes that have the same name and tablename
-        /*if (returnValue == 0) {
-        	returnValue = this.getColumnName().compareTo(o.getColumnName());
-        }*/
-
+        if (returnValue == 0) {
+            returnValue = getUniqueValue().compareTo(o.getUniqueValue());
+        }
 
         return returnValue;
     }
 
+    private Integer getUniqueValue() {
+        if (unique == null) {
+            return 0;
+        }
+        return unique ? 1 : 2;
+    }
+
     @Override
     public String toString() {
-        StringBuffer stringBuffer = new StringBuffer();
+        StringBuilder stringBuffer = new StringBuilder();
         stringBuffer.append(getName());
-        if (this.unique != null && !this.unique) {
+        if (BooleanUtils.toBoolean(unique)) {
             stringBuffer.append(" unique ");
         }
         if (table != null && columns != null) {
             stringBuffer.append(" on ").append(table.getName());
-            if (columns != null) {
-                stringBuffer.append("(");
-                for (String column : columns) {
-                    stringBuffer.append(column).append(", ");
-                }
-                stringBuffer.delete(stringBuffer.length() - 2, stringBuffer.length());
-                stringBuffer.append(")");
+            stringBuffer.append("(");
+            for (String column : columns) {
+                stringBuffer.append(column).append(", ");
             }
+            stringBuffer.delete(stringBuffer.length() - 2, stringBuffer.length());
+            stringBuffer.append(")");
         }
         return stringBuffer.toString();
     }

@@ -1,13 +1,24 @@
 package liquibase.diff;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+
 import liquibase.database.Database;
-import liquibase.database.structure.*;
+import liquibase.database.structure.Column;
+import liquibase.database.structure.ForeignKey;
+import liquibase.database.structure.Index;
+import liquibase.database.structure.PrimaryKey;
+import liquibase.database.structure.Sequence;
+import liquibase.database.structure.Table;
+import liquibase.database.structure.UniqueConstraint;
+import liquibase.database.structure.View;
 import liquibase.exception.DatabaseException;
 import liquibase.snapshot.DatabaseSnapshot;
 import liquibase.snapshot.DatabaseSnapshotGeneratorFactory;
 import liquibase.util.StringUtils;
-
-import java.util.*;
 
 public class Diff {
 
@@ -108,14 +119,14 @@ public class Diff {
 		removeDuplicateIndexes( diffResult.getUnexpectedIndexes() );
 		removeDuplicateUniqueConstraints( diffResult.getMissingUniqueConstraints() );
 		removeDuplicateUniqueConstraints( diffResult.getUnexpectedUniqueConstraints() );
-        
+
 		return diffResult;
 	}
 
 	public void setDiffTypes(String diffTypes) {
 		if (StringUtils.trimToNull(diffTypes) != null) {
 			Set<String> types = new HashSet<String>(Arrays.asList(diffTypes.toLowerCase().split("\\s*,\\s*")));
-            
+
 			diffTables = types.contains("tables");
 			diffColumns = types.contains("columns");
 			diffViews = types.contains("views");
@@ -397,17 +408,6 @@ public class Diff {
 			}
 		}
 
-		// Sort the columns.
-		Set<String> sortedColumns = new TreeSet<String>();
-		for ( Index idx : combinedIndexes )
-		{
-			List<String> columns = idx.getColumns();
-			sortedColumns.clear();
-			sortedColumns.addAll( columns );
-			columns.clear();
-			columns.addAll( sortedColumns );
-		}
-
 		indexes.removeAll( indexesToRemove );
 	}
 
@@ -448,17 +448,6 @@ public class Diff {
 
 				combinedConstraints.add( uc1 );
 			}
-		}
-
-		// Sort the columns.
-		Set<String> sortedColumns = new TreeSet<String>();
-		for ( UniqueConstraint uc : combinedConstraints )
-		{
-			List<String> columns = uc.getColumns();
-			sortedColumns.clear();
-			sortedColumns.addAll( columns );
-			columns.clear();
-			columns.addAll( sortedColumns );
 		}
 
 		uniqueConstraints.removeAll( constraintsToRemove );

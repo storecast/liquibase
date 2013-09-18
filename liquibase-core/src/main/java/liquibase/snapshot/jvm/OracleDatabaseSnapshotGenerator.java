@@ -1,18 +1,31 @@
 package liquibase.snapshot.jvm;
 
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Types;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import liquibase.database.Database;
-import liquibase.database.jvm.JdbcConnection;
 import liquibase.database.core.OracleDatabase;
-import liquibase.database.structure.*;
+import liquibase.database.jvm.JdbcConnection;
+import liquibase.database.structure.Column;
+import liquibase.database.structure.ForeignKey;
+import liquibase.database.structure.ForeignKeyConstraintType;
+import liquibase.database.structure.ForeignKeyInfo;
+import liquibase.database.structure.Index;
+import liquibase.database.structure.PrimaryKey;
+import liquibase.database.structure.Table;
+import liquibase.database.structure.UniqueConstraint;
 import liquibase.exception.DatabaseException;
 import liquibase.snapshot.DatabaseSnapshot;
 import liquibase.util.JdbcUtils;
-
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
 
 public class OracleDatabaseSnapshotGenerator extends JdbcDatabaseSnapshotGenerator {
 
@@ -298,7 +311,18 @@ public class OracleDatabaseSnapshotGenerator extends JdbcDatabaseSnapshotGenerat
         Database database = snapshot.getDatabase();
         updateListeners("Reading indexes for " + database.toString() + " ...");
 
-        String query = "select aic.index_name, 3 AS TYPE, aic.table_name, aic.column_name, aic.column_position AS ORDINAL_POSITION, null AS FILTER_CONDITION, ai.tablespace_name AS TABLESPACE, ai.uniqueness FROM all_ind_columns aic, all_indexes ai WHERE aic.table_owner='" + database.convertRequestedSchemaToSchema(schema) + "' and aic.index_name = ai.index_name ORDER BY INDEX_NAME, ORDINAL_POSITION";
+        String query = "select aic.index_name, " +
+            "3 AS TYPE, " +
+            "aic.table_name, " +
+            "aic.column_name, " +
+            "aic.column_position AS ORDINAL_POSITION, " +
+            "e.COLUMN_EXPRESSION AS FILTER_CONDITION, " +
+            "ai.tablespace_name AS TABLESPACE, " +
+            "ai.uniqueness " +
+            "FROM all_ind_columns aic " +
+            "JOIN all_indexes ai ON aic.index_name = ai.index_name " +
+            "LEFT JOIN all_ind_expressions e on (e.column_position = aic.column_position AND e.index_name = aic.index_name)" +
+            "WHERE aic.table_owner='" + database.convertRequestedSchemaToSchema(schema) + "' ORDER BY INDEX_NAME, ORDINAL_POSITION";
         Statement statement = null;
         ResultSet rs = null;
         Map<String, Index> indexMap = null;
@@ -309,14 +333,16 @@ public class OracleDatabaseSnapshotGenerator extends JdbcDatabaseSnapshotGenerat
             indexMap = new HashMap<String, Index>();
             while (rs.next()) {
                 String indexName = convertFromDatabaseName(rs.getString("INDEX_NAME"));
+                short type = rs.getShort("TYPE");
                 String tableName = rs.getString("TABLE_NAME");
-                String tableSpace = rs.getString("TABLESPACE");
                 String columnName = convertFromDatabaseName(rs.getString("COLUMN_NAME"));
+                short position = rs.getShort("ORDINAL_POSITION");
+                String filterCondition = rs.getString("FILTER_CONDITION");
+                String tableSpace = rs.getString("TABLESPACE");
                 if (columnName == null) {
                     //nothing to index, not sure why these come through sometimes
                     continue;
                 }
-                short type = rs.getShort("TYPE");
 
                 boolean nonUnique;
 
@@ -328,8 +354,9 @@ public class OracleDatabaseSnapshotGenerator extends JdbcDatabaseSnapshotGenerat
                     nonUnique = true;
                 }
 
-                short position = rs.getShort("ORDINAL_POSITION");
-                String filterCondition = rs.getString("FILTER_CONDITION");
+                if (filterCondition != null) {
+                    columnName = filterCondition.replaceAll("\"", "");
+                }
 
                 if (type == DatabaseMetaData.tableIndexStatistic) {
                     continue;

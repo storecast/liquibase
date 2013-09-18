@@ -1,12 +1,24 @@
 package liquibase.database.typeconversion.core;
 
+import java.sql.Types;
+import java.text.ParseException;
+
 import liquibase.database.Database;
 import liquibase.database.core.OracleDatabase;
 import liquibase.database.structure.Column;
-import liquibase.database.structure.type.*;
-
-import java.sql.Types;
-import java.text.ParseException;
+import liquibase.database.structure.type.BigIntType;
+import liquibase.database.structure.type.BooleanType;
+import liquibase.database.structure.type.CurrencyType;
+import liquibase.database.structure.type.CustomType;
+import liquibase.database.structure.type.DataType;
+import liquibase.database.structure.type.DateTimeType;
+import liquibase.database.structure.type.DoubleType;
+import liquibase.database.structure.type.IntType;
+import liquibase.database.structure.type.NVarcharType;
+import liquibase.database.structure.type.TimeType;
+import liquibase.database.structure.type.TinyIntType;
+import liquibase.database.structure.type.UUIDType;
+import liquibase.database.structure.type.VarcharType;
 
 public class OracleTypeConverter extends AbstractTypeConverter {
 
@@ -60,7 +72,10 @@ public class OracleTypeConverter extends AbstractTypeConverter {
             translatedTypeName = translatedTypeName+ "(" + referenceColumn.getColumnSize() + ")";
         } else if ("BINARY_FLOAT".equals(translatedTypeName) || "BINARY_DOUBLE".equals(translatedTypeName)) {
             // nothing to do
-        } else {
+        } else if ("VARBINARY".equals(translatedTypeName)){
+            translatedTypeName = "raw(" + referenceColumn.getColumnSize() + ")";
+        }
+        else {
             translatedTypeName = super.convertToDatabaseTypeString(referenceColumn, database);
         }
         return translatedTypeName;
